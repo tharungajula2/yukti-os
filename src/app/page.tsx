@@ -251,28 +251,231 @@ function DashboardShell() {
         </header>
 
         {activeView === "dashboard" && (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200/60 bg-white/60 p-6 backdrop-blur-sm">
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
-                <Activity size={20} />
+          <div className="space-y-8">
+            {/* 1. WELCOME SECTION */}
+            <div className="bg-orange-50/50 p-6 rounded-3xl border border-orange-100 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div>
+                <h2 className="text-2xl md:text-2xl font-bold text-slate-900 mb-2">
+                  {(() => {
+                    const h = new Date().getHours();
+                    if (h < 12) return "Good Morning";
+                    if (h < 18) return "Good Afternoon";
+                    return "Good Evening";
+                  })()}, Tharun! ☀️
+                </h2>
+                <p className="text-slate-600">
+                  Here is your daily health summary. System is <span className="text-emerald-600 font-bold flex inline-flex items-center gap-1"><Activity size={12} /> Active</span>.
+                </p>
               </div>
-              <h3 className="text-lg font-medium text-slate-900">Patient Vitals</h3>
-              <p className="text-sm text-slate-500 mt-1">Real-time monitoring active.</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200/60 bg-white/60 p-6 backdrop-blur-sm">
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-                <Users size={20} />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setActiveView("smart-reports")}
+                  className="bg-white text-slate-700 px-4 py-2 rounded-xl font-semibold text-sm border border-slate-200 shadow-sm hover:bg-slate-50 transition-all flex items-center gap-2"
+                >
+                  <FileText size={16} /> Upload Report
+                </button>
+                <button
+                  onClick={() => setActiveView("medicines")}
+                  className="bg-orange-600 text-white px-4 py-2 rounded-xl font-semibold text-sm shadow-md shadow-orange-200 hover:bg-orange-700 transition-all flex items-center gap-2"
+                >
+                  <BookOpen size={16} /> Log Meds
+                </button>
               </div>
-              <h3 className="text-lg font-medium text-slate-900">Active Patients</h3>
-              <p className="text-sm text-slate-500 mt-1">12 patients currently checked in.</p>
             </div>
-            <div className="rounded-2xl border border-slate-200/60 bg-white/60 p-6 backdrop-blur-sm">
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-                <FileText size={20} />
+
+            {/* 2. THREE PILLARS (Context Aware) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+              {/* CARD 1: HEALTH SHIELD (Clinical Engine) */}
+              {(() => {
+                let assessment = null;
+                if (typeof window !== 'undefined') {
+                  try { assessment = JSON.parse(localStorage.getItem("yukti_assessment_data_v2") || "null"); } catch (e) { }
+                }
+
+                if (!assessment) {
+                  return (
+                    <div
+                      onClick={() => setActiveView("clinical")}
+                      className="group cursor-pointer p-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 hover:bg-white hover:border-orange-300 transition-all flex flex-col items-center justify-center text-center h-48"
+                    >
+                      <div className="h-12 w-12 bg-slate-200 text-slate-400 rounded-full flex items-center justify-center mb-3 group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
+                        <Stethoscope size={24} />
+                      </div>
+                      <h3 className="font-bold text-slate-700 mb-1">Assessment Pending</h3>
+                      <p className="text-xs text-slate-500 mb-3">Complete your profile to activate <br /> AI Risk Monitoring.</p>
+                      <span className="text-xs font-bold text-orange-600 uppercase tracking-wide">Start Now &rarr;</span>
+                    </div>
+                  );
+                }
+
+                // Parse Risk
+                const riskScore = assessment.riskScore || assessment.total || 0; // Fallback
+                let color = "text-emerald-600 bg-emerald-50 border-emerald-100";
+                let label = "Healthy Baseline";
+                if (assessment.riskLevel?.includes("High") || riskScore > 40) {
+                  color = "text-red-600 bg-red-50 border-red-100";
+                  label = "Attention Required";
+                } else if (assessment.riskLevel?.includes("Moderate") || riskScore > 20) {
+                  color = "text-amber-600 bg-amber-50 border-amber-100";
+                  label = "Moderate Watch";
+                }
+
+                return (
+                  <div className="p-6 rounded-3xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all flex flex-col justify-between h-48 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <Stethoscope size={80} className="text-slate-900" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`p-1.5 rounded-lg ${color} bg-opacity-20`}>
+                          <Activity size={16} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Health Shield</span>
+                      </div>
+                      <h3 className="text-3xl font-bold text-slate-900">{assessment.riskLevel || "Analyzed"}</h3>
+                      <p className="text-sm font-medium text-slate-500 mt-1">{label}</p>
+                    </div>
+                    <div className="mt-4">
+                      <button onClick={() => setActiveView("clinical")} className="text-xs font-bold text-slate-400 hover:text-slate-600 flex items-center gap-1">
+                        View Assessment <ArrowRight size={12} />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* CARD 2: DAILY WELLNESS (Meds) */}
+              {(() => {
+                let activeMeds = 0;
+                let takenCount = 0;
+                if (typeof window !== 'undefined') {
+                  const meds = JSON.parse(localStorage.getItem("yukti_active_meds") || "[]");
+                  const today = new Date().toISOString().split('T')[0];
+                  const log = JSON.parse(localStorage.getItem(`yukti_daily_log_${today}`) || '{"meds":[]}');
+                  activeMeds = meds.filter((m: any) => !m.status || m.status === 'Active').length;
+                  takenCount = log.meds.length;
+                }
+
+                if (activeMeds === 0) {
+                  return (
+                    <div
+                      onClick={() => setActiveView("medicines")}
+                      className="group cursor-pointer p-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 hover:bg-white hover:border-blue-300 transition-all flex flex-col items-center justify-center text-center h-48"
+                    >
+                      <div className="h-12 w-12 bg-slate-200 text-slate-400 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                        <BookOpen size={24} />
+                      </div>
+                      <h3 className="font-bold text-slate-700 mb-1">No Medicines</h3>
+                      <p className="text-xs text-slate-500 mb-3">Add your daily prescriptions <br /> to track adherence.</p>
+                      <span className="text-xs font-bold text-blue-600 uppercase tracking-wide">Setup &rarr;</span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="p-6 rounded-3xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all flex flex-col justify-between h-48 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <BookOpen size={80} className="text-slate-900" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                          <BookOpen size={16} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Daily Adherence</span>
+                      </div>
+                      <h3 className="text-4xl font-bold text-slate-900 flex items-baseline gap-2">
+                        {takenCount} <span className="text-xl text-slate-400 font-medium">/ {activeMeds}</span>
+                      </h3>
+                      <p className="text-sm font-medium text-slate-500 mt-1">
+                        {takenCount === activeMeds ? "All done for today! 🎉" : `${activeMeds - takenCount} doses remaining.`}
+                      </p>
+                    </div>
+                    <div className="mt-4">
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${(takenCount / activeMeds) * 100}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* CARD 3: RECENT ACTIVITY */}
+              {(() => {
+                let lastReport = null;
+                if (typeof window !== 'undefined') {
+                  const history = JSON.parse(localStorage.getItem("yukti_history") || "[]");
+                  if (history.length > 0) lastReport = history[history.length - 1];
+                }
+
+                if (!lastReport) {
+                  return (
+                    <div
+                      onClick={() => setActiveView("smart-reports")}
+                      className="group cursor-pointer p-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 hover:bg-white hover:border-emerald-300 transition-all flex flex-col items-center justify-center text-center h-48"
+                    >
+                      <div className="h-12 w-12 bg-slate-200 text-slate-400 rounded-full flex items-center justify-center mb-3 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-colors">
+                        <FileText size={24} />
+                      </div>
+                      <h3 className="font-bold text-slate-700 mb-1">No Analysis Yet</h3>
+                      <p className="text-xs text-slate-500 mb-3">Upload a lab report to see <br /> AI insights here.</p>
+                      <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Upload &rarr;</span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="p-6 rounded-3xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all flex flex-col justify-between h-48 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <FileText size={80} className="text-slate-900" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                          <FileText size={16} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Latest Insight</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900 line-clamp-2 leading-tight">
+                        {lastReport.summary ? lastReport.summary.substring(0, 60) + "..." : "Lab Report Analyzed"}
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-2 font-mono">
+                        {lastReport.meta?.reportDate || "Recent Upload"}
+                      </p>
+                    </div>
+                    <div className="mt-4">
+                      <button onClick={() => setActiveView("smart-reports")} className="text-emerald-600 text-xs font-bold uppercase tracking-wide hover:underline">
+                        Read Full Analysis
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+
+            </div>
+
+            {/* 3. WHATSAPP BANNER (New) */}
+            <div
+              onClick={() => setActiveView("whatsapp")}
+              className="cursor-pointer bg-gradient-to-r from-[#25D366] to-[#128C7E] p-1 rounded-3xl shadow-lg shadow-green-100 transform hover:scale-[1.01] transition-all"
+            >
+              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-[20px] flex items-center justify-between text-white">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center text-[#128C7E]">
+                    <MessageCircle size={28} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Enable WhatsApp Care Assistant</h3>
+                    <p className="text-white/80 text-sm">Get medication reminders and daily summaries directly on WhatsApp.</p>
+                  </div>
+                </div>
+                <div className="bg-white text-[#128C7E] px-4 py-2 rounded-xl font-bold text-sm">
+                  Activate Demo
+                </div>
               </div>
-              <h3 className="text-lg font-medium text-slate-900">Pending Reports</h3>
-              <p className="text-sm text-slate-500 mt-1">3 reports require analysis.</p>
             </div>
+
           </div>
         )}
 
