@@ -11,93 +11,139 @@ export function loadDemoData() {
         }
     });
 
-    // 2. SET DEMO AUTH
+    // 2. SET AUTH & IDENTITY
     localStorage.setItem("yukti_auth_v2", "true");
+    localStorage.setItem('yukti_user_name', 'Chaaya');
+    localStorage.setItem('yukti_user_gender', 'Female');
+    localStorage.setItem('yukti_user_age', '61');
 
-    // 3. SET PROFILE (High Risk)
+    // 3. CLINICAL ASSESSMENT (Mapped to Engine Format)
+    // Using the EXACT answers requested by the user.
     const answers = {
-        q1: "70+", // Age
-        q2: "Diabetes", // High Blood Sugar
-        q3: "Multiple/Severe", // BP/Heart
-        q4: "Often", // Breathless
-        q5: "No", // Parkinson's
-        q6: "Sometimes", // Confusion
-        q7: "Once/Minor", // Surgery (Cataract)
-        q8: "Severe/Daily", // Joint Pain
-        q9: "Once", // Falls
-        q10: "No", // Assistance
-        q11: "No", // Gut
-        q12: "No", // Stress
-        q13: "Sometimes", // Sleep
-        q14: "Sometimes", // Diet
-        q15: "None" // Habits
+        q1: "56-69",           // Age
+        q2: "Diabetes",        // Metabolic
+        q3: "No",              // Cardio
+        q4: "Often",           // Breathless (Asthma)
+        q5: "No",              // Neuro
+        q6: "No",              // Neuro
+        q7: "No",              // Surgery
+        q8: "Severe/Daily",    // Pain (Joint/Back/Knee) - UPDATED
+        q9: "No",              // Falls
+        q10: "No",             // ADL
+        q11: "No",             // Gut
+        q12: "Sometimes",      // Mood (Stressed/Anxious) - UPDATED
+        q13: "Often/Poor",     // Sleep - UPDATED
+        q14: "Sometimes",      // Diet (Unhealthy) - UPDATED
+        q15: "One habit"       // Habits (Smoke/Drink/No Exercise) - UPDATED
     };
 
-    const profile = {
-        answers: answers, // CRITICAL: This drives the Clinical Engine
-        riskScore: 45, // Legacy/Fallback
-        riskLevel: "High"
+    // Pre-calculated Scores (Chaaya's Profile)
+    // Metabolic(15) + Respiratory/Resilience(20) + Muscular(20) + Emotional(5) + Sleep(10) + Lifestyle(5)
+    // Total approx 75 => High Risk
+    const scores = {
+        total: 75,
+        riskLevel: "High Risk: Immediate Action Required",
+        categories: [
+            { name: "Metabolic", score: 15, max: 15 },
+            { name: "Cardiovascular", score: 0, max: 15 },
+            { name: "Cognitive", score: 0, max: 20 },
+            { name: "Muscular", score: 20, max: 20 },
+            { name: "Frailty", score: 0, max: 20 },
+            { name: "Digestive", score: 0, max: 10 },
+            { name: "Emotional", score: 5, max: 10 },
+            { name: "Sleep", score: 10, max: 10 },
+            { name: "Lifestyle", score: 5, max: 20 },
+            { name: "Resilience", score: 20, max: 35 }
+        ]
     };
-    localStorage.setItem("yukti_assessment_data_v2", JSON.stringify(profile));
 
-    // 4. SET HISTORY (Trend)
-    const history = [
+    localStorage.setItem('yukti_assessment_data_v2', JSON.stringify({
+        answers,
+        scores,
+        riskLevel: "High Risk: Immediate Action Required",
+        riskScore: 75
+    }));
+
+    // 4. ACTIVE MEDICINES
+    const meds = [
         {
-            meta: { reportDate: "2025-12-15", reportType: "Doctor Note" }, // Matches SmartReport structure
-            summary: "Routine checkup. BP 140/90. Complaints of fatigue. HbA1c: 7.2%. instructed to increase walking.",
-            biomarkers: [{ name: "BP", value: "140/90", unit: "mmHg", status: "High" }, { name: "HbA1c", value: "7.2", unit: "%", status: "High" }]
+            id: 'm1', name: 'Glycomet 0.5mg', type: 'Tablet',
+            dosage: '500mg', timing: 'Before Breakfast', slots: ['Morning'], instructions: 'Before Breakfast', relationToFood: 'Before Food',
+            status: 'Active', category: 'Chronic'
         },
         {
-            meta: { reportDate: "2025-01-10", reportType: "Lab Report" },
-            summary: "Lab Report Analysis. Slight elevation in Creatinine (1.1). HbA1c risen to 7.8%. Medication review suggested.",
-            biomarkers: [{ name: "Creatinine", value: "1.1", unit: "mg/dL", status: "Borderline" }, { name: "HbA1c", value: "7.8", unit: "%", status: "High", trend: "Rising" }]
+            id: 'm2', name: 'Levolin Rotacaps', type: 'Inhaler',
+            dosage: '100mcg', timing: 'Before Sleep', slots: ['Night'], instructions: 'Daily - Before Sleep', relationToFood: 'After Food',
+            status: 'Active', category: 'Chronic'
+        },
+        {
+            id: 'm3', name: 'Combihale FF 100', type: 'Inhaler',
+            dosage: '100mg', timing: 'Before Sleep', slots: ['Night'], instructions: 'Daily - Before Sleep', relationToFood: 'After Food',
+            status: 'Active', category: 'Chronic'
+        },
+        {
+            id: 'm4', name: 'Teczine', type: 'Tablet',
+            dosage: '10mg', timing: 'After 6 PM', slots: ['Evening'], instructions: 'After 6 PM (Alt Days)', relationToFood: 'After Food',
+            status: 'Active', category: 'Chronic'
+        },
+        {
+            id: 'm5', name: 'Excela Max / Coconut Oil', type: 'Lotion',
+            dosage: 'Apply Generously', timing: 'Morning & Night', slots: ['Morning', 'Night'], instructions: 'For Hand Eczema & Feet', relationToFood: 'Before Food',
+            status: 'Active', category: 'Supportive'
         }
     ];
-    localStorage.setItem("yukti_history", JSON.stringify(history));
+    localStorage.setItem('yukti_active_meds', JSON.stringify(meds));
 
-    // 4.5 SET HOLISTIC SUMMARY (So Smart Report Tab isn't empty)
+    // 5. HISTORY & SMART REPORTS
+    // Added 'meta' field for compatibility
+    const history = [
+        {
+            meta: { reportDate: '2025-10-12', reportType: 'Consultation' },
+            date: '2025-10-12', 
+            type: 'Consultation',
+            summary: 'Patient reports persistent skin inflammation (Atopic Dermatitis). Asthma triggers noted in winter. HbA1c stable at 6.8%.',
+            biomarkers: [
+                { name: 'HbA1c', value: '6.8', unit: '%', status: 'Warning', trend: 'Stable' },
+                { name: 'Eosinophils', value: 'High', unit: '', status: 'Abnormal' }
+            ]
+        }
+    ];
+    localStorage.setItem('yukti_history', JSON.stringify(history));
+
+    // 6. LATEST HOLISTIC SUMMARY (Pre-loaded)
     const holisticSummary = {
         isSummary: true,
-        title: "Holistic Health Snapshot",
-        patientRiskProfile: "High Risk (Diabetes + Fall History)",
-        trendAnalysis: "**Worrying Trend:** HbA1c has risen from 7.2% (Dec) to 7.8% (Jan). Blood pressure remains uncontrolled (140/90). Reports indicate worsening metabolic control correlated with reduced mobility.",
+        title: "Holistic Health Summary",
+        patientRiskProfile: "High Risk Profile: Actively managing **Diabetes** and chronic **inflammatory conditions** (Atopic Dermatitis, Asthma), requiring immediate attention for integrated care.",
+        trendAnalysis: "Your reports show you've been **steadily managing your Diabetes**, which is a positive step. However, there's a **clear and ongoing pattern of inflammation and allergic reactions** affecting both your skin and breathing. This continuous internal activity, along with your feelings of stress, suggests that these parts of your health are all connected.",
         keyFindings: [
-            "**Diabetes Unmanaged:** HbA1c 7.8% despite Metformin.",
-            "**Fall Risk:** History of fall + 'Occasional Dizziness' reported.",
-            "**Renal Watch:** Creatinine 1.1 requires monitoring given the diabetes."
+            "**Diabetes Management**: Your health assessment showed a perfect score for metabolic health (Medicated), but HbA1c is 6.8% (Warning).",
+            "**Inflammation and Allergies**: Persistent skin inflammation and Asthma triggers.",
+            "**Muscular Health**: Severe joint/back pain reported, impacting mobility."
         ],
-        recommendation: "Immediate consultation with Dr. Aditi Rao to adjust anti-diabetic dosage. Start 'Fall Prevention Protocol' (Calcium + Home Safety Check).",
+        recommendation: "Integrated care plan focusing on anti-inflammatory diet, stress reduction, and strict adherence to Levolin/Combihale. Consult Orthopedist for joint pain.",
         disclaimer: "AI-Generated Summary. Verify with Doctor."
     };
     localStorage.setItem("yukti_latest_summary", JSON.stringify(holisticSummary));
 
-    // 5. SET MEDICINES
-    const meds = [
-        { name: "Metformin", dosage: "500mg", timing: "After Food", type: "Chronic", status: "Active", slots: ["Morning", "Night"], relationToFood: "After Food" },
-        { name: "Telmisartan", dosage: "40mg", timing: "Before Breakfast", type: "Chronic", status: "Active", slots: ["Morning"], relationToFood: "Before Food" },
-        { name: "Shelcal 500", dosage: "500mg", timing: "After Lunch", type: "Chronic", status: "Active", slots: ["Afternoon"], relationToFood: "After Food" },
-        { name: "Atorvastatin", dosage: "10mg", timing: "Before Sleep", type: "Chronic", status: "Active", slots: ["Night"], relationToFood: "After Food" },
-        { name: "Coconut Oil", dosage: "1 tsp", timing: "Before Bath", type: "Chronic", status: "Active", slots: ["Morning"], relationToFood: "Before Food", remarks: "For dry skin application" }
-    ];
-    localStorage.setItem("yukti_active_meds", JSON.stringify(meds));
+    // 7. DAILY LOGS (Generate some history for the calendar)
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Today: Partial
+    localStorage.setItem('yukti_daily_log_' + todayStr, JSON.stringify({
+        meds: ['Glycomet 0.5mg', 'Excela Max / Coconut Oil'], 
+        vitals: { bpSys: 130, bpDia: 85, sugar: 140 }
+    }));
 
-    // 6. SET LOGS (Behavior Pattern)
     // Yesterday: Perfect
-    const yesterday = "2026-01-21";
-    const logYesterday = {
-        meds: ["Metformin", "Telmisartan", "Shelcal 500", "Atorvastatin", "Coconut Oil"],
-        vitals: { bpSys: 128, bpDia: 82, sugar: 110 }
-    };
-    localStorage.setItem(`yukti_daily_log_${yesterday}`, JSON.stringify(logYesterday));
+    const yest = new Date(today); yest.setDate(yest.getDate() - 1);
+    const yestStr = yest.toISOString().split('T')[0];
+    localStorage.setItem('yukti_daily_log_' + yestStr, JSON.stringify({
+        meds: ['Glycomet 0.5mg', 'Levolin Rotacaps', 'Combihale FF 100', 'Teczine', 'Excela Max / Coconut Oil'], 
+        vitals: { bpSys: 125, bpDia: 80 }
+    }));
 
-    // Day Before: Missed Night Meds
-    const dayBefore = "2026-01-20";
-    const logDayBefore = {
-        meds: ["Metformin", "Telmisartan", "Shelcal 500", "Coconut Oil"], // Missed Atorvastatin & 2nd Metformin
-        vitals: { bpSys: 135, bpDia: 88, sugar: 145 }
-    };
-    localStorage.setItem(`yukti_daily_log_${dayBefore}`, JSON.stringify(logDayBefore));
-
-    alert("Demo Profile Loaded: Mukesh (High Risk) 🚀");
+    alert("Demo Profile Loaded: Chaaya (High Risk / Asthma / Diabetes) 🚀");
     window.location.reload();
-}
+};

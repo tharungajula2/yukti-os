@@ -365,7 +365,9 @@ export function SmartReport({ onNavigate }: SmartReportProps) {
                                             </div>
                                             <div>
                                                 <h3 className="text-2xl font-bold text-slate-900">{analysisData.title}</h3>
-                                                <p className="text-indigo-600 font-medium">{analysisData.patientRiskProfile}</p>
+                                                <div className="text-indigo-600 font-medium prose prose-sm max-w-none prose-p:m-0 prose-strong:text-indigo-800">
+                                                    <ReactMarkdown>{analysisData.patientRiskProfile}</ReactMarkdown>
+                                                </div>
                                             </div>
                                         </div>
 

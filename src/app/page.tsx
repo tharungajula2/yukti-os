@@ -87,7 +87,7 @@ export default function Home() {
                 onClick={() => loadDemoData()}
                 className="w-full py-2 text-xs font-semibold text-orange-600 hover:text-orange-700 uppercase tracking-widest hover:bg-orange-50/50 rounded-lg transition-colors border border-transparent hover:border-orange-100"
               >
-                Load Founder's Demo (Mukesh)
+                Load Founder's Demo (Chaaya)
               </button>
             </form>
           </div>
@@ -104,6 +104,7 @@ import { ClinicalEngine } from "../components/ClinicalEngine";
 import { MedicationTracker } from "../components/MedicationTracker";
 import { CareTeam } from "../components/CareTeam";
 import { WhatsAppDemo } from "../components/WhatsAppDemo";
+import { HeaderIcons } from "../components/HeaderIcons";
 import { LogOut, Trash2 } from "lucide-react";
 
 function DashboardShell() {
@@ -121,9 +122,14 @@ function DashboardShell() {
         localStorage.removeItem("yukti_latest_summary");
         localStorage.removeItem("yukti_active_meds");
 
-        // Clear all med logs
+        // Clear Identity
+        localStorage.removeItem("yukti_user_name");
+        localStorage.removeItem("yukti_user_gender");
+        localStorage.removeItem("yukti_user_age");
+
+        // Clear all med logs (including new daily logs)
         Object.keys(localStorage).forEach((key) => {
-          if (key.startsWith("yukti_med_log_")) {
+          if (key.startsWith("yukti_med_log_") || key.startsWith("yukti_daily_log_")) {
             localStorage.removeItem(key);
           }
         });
@@ -236,18 +242,12 @@ function DashboardShell() {
       <main className="flex-1 p-4 pt-20 md:p-8 overflow-x-hidden">
         <header className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-xl md:text-2xl font-semibold text-slate-900">Welcome back, Tharun</h1>
+            <h1 className="text-xl md:text-2xl font-semibold text-slate-900">
+              Welcome back, {typeof window !== 'undefined' ? (localStorage.getItem('yukti_user_name') || 'User') : 'User'}
+            </h1>
             <p className="text-sm text-slate-600">System operating at nominal capacity.</p>
           </div>
-          <div className="flex items-center gap-4">
-            <button className="h-10 w-10 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50">
-              <Bell size={20} />
-            </button>
-            <div className="h-10 w-10 overflow-hidden rounded-full bg-orange-100 border border-orange-200">
-              {/* Avatar placeholder */}
-              <div className="h-full w-full flex items-center justify-center text-orange-700 font-medium">T</div>
-            </div>
-          </div>
+          <HeaderIcons />
         </header>
 
         {activeView === "dashboard" && (
@@ -261,7 +261,7 @@ function DashboardShell() {
                     if (h < 12) return "Good Morning";
                     if (h < 18) return "Good Afternoon";
                     return "Good Evening";
-                  })()}, Tharun! ☀️
+                  })()}, {typeof window !== 'undefined' ? (localStorage.getItem('yukti_user_name') || 'User') : 'User'}! ☀️
                 </h2>
                 <p className="text-slate-600">
                   Here is your daily health summary. System is <span className="text-emerald-600 font-bold flex inline-flex items-center gap-1"><Activity size={12} /> Active</span>.
@@ -497,7 +497,7 @@ function DashboardShell() {
         }}
         onDecline={() => setIsCallActive(false)}
       />
-    </div>
+    </div >
   );
 }
 

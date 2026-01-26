@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Pill, Check, Calendar as CalendarIcon, PlusCircle, AlertCircle, Clock, Trash2, Activity, Heart, Scale, Droplet, ChevronLeft, ChevronRight, Edit3 } from "lucide-react";
+import { Pill, Check, Calendar as CalendarIcon, PlusCircle, AlertCircle, Clock, Trash2, Activity, Heart, Scale, Droplet, ChevronLeft, ChevronRight, Edit3, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Medication {
@@ -43,13 +43,16 @@ interface MedicationTrackerProps {
 export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
     // --- STATE ---
     const [meds, setMeds] = useState<Medication[]>([]);
-    const [activeTab, setActiveTab] = useState<"today" | "calendar" | "manage">("today");
+    const [activeTab, setActiveTab] = useState<"daily" | "calendar" | "manage">("daily");
 
-    // Today's Data
+    // Date Context
     const [todayKey, setTodayKey] = useState("");
-    const [todayLog, setTodayLog] = useState<DailyLog>({ meds: [], vitals: {} });
+    const [viewingDate, setViewingDate] = useState(""); // The date currently being viewed/edited
 
-    // Vitals & Habits Input
+    // Log Data for Viewing Date
+    const [activeLog, setActiveLog] = useState<DailyLog>({ meds: [], vitals: {} });
+
+    // Vitals & Habits Input (Temporary State for Form)
     const [statsInput, setStatsInput] = useState<Vitals>({});
     const [habitsInput, setHabitsInput] = useState<{ mealPlan: boolean, activity: string, hydration: string }>({
         mealPlan: false, activity: "", hydration: ""
@@ -57,8 +60,7 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
 
     // Calendar Data
     const [currentMonth, setCurrentMonth] = useState(new Date());
-    const [selectedDate, setSelectedDate] = useState<string | null>(null); // YYYY-MM-DD
-    const [historyData, setHistoryData] = useState<Record<string, DailyLog>>({}); // Cache of month's logs
+    const [historyData, setHistoryData] = useState<Record<string, DailyLog>>({}); // Cache of logs
 
     // Edit Mode (Manage Tab)
     const [editingMed, setEditingMed] = useState<Medication | null>(null);
@@ -72,13 +74,16 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
     useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
         setTodayKey(today);
-        setSelectedDate(today);
+
+        // Default to today if not set
+        if (!viewingDate) setViewingDate(today);
 
         // 1. Load Meds
         const savedMeds = localStorage.getItem("yukti_active_meds");
         if (savedMeds) {
             try {
                 const parsed = JSON.parse(savedMeds);
+                // Migration safety
                 const migrated = parsed.map((m: any) => ({
                     ...m,
                     status: m.status || "Active",
@@ -88,31 +93,16 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
             } catch (e) { console.error("Meds parse error", e); }
         }
 
-        // 2. Load Today's Log (Handle Migration)
-        loadDailyLog(today).then(log => {
-            setTodayLog(log);
-            setStatsInput(log.vitals); // Prefill inputs
-            if (log.habits) {
-                setHabitsInput({
-                    mealPlan: log.habits.mealPlan || false,
-                    activity: log.habits.activity?.toString() || "",
-                    hydration: log.habits.hydration?.toString() || ""
-                });
-            }
-        });
-
-        // 3. Load History for Calendar context
+        // 2. Load History for Calendar context
         loadHistoryContext();
 
-        // 4. Timer Logic (Fake Call Trigger)
+        // 3. Timer Logic (Fake Call Trigger)
         const interval = setInterval(() => {
             const now = new Date();
             const h = now.getHours();
             const m = now.getMinutes();
             if (m === 0 && (h === 9 || h === 13 || h === 21)) {
                 const activeMedsExist = meds.some(m => !m.status || m.status === 'Active');
-                // Only trigger if NOT taken yet today (simple check)
-                // Advanced: Check specific slots. MVP: Trigger if *any* meds exist.
                 if (activeMedsExist && onTriggerCall) onTriggerCall();
             }
         }, 60000);
@@ -120,36 +110,40 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
 
     }, [meds.length]); // Re-load if meds list changes length/init
 
+    // --- EFFECT: LOAD LOG WHEN DATE CHANGES ---
+    useEffect(() => {
+        if (!viewingDate) return;
+        loadDailyLog(viewingDate).then(log => {
+            setActiveLog(log);
+            setStatsInput(log.vitals || {}); // Prefill inputs
+            if (log.habits) {
+                setHabitsInput({
+                    mealPlan: log.habits.mealPlan || false,
+                    activity: log.habits.activity?.toString() || "",
+                    hydration: log.habits.hydration?.toString() || ""
+                });
+            } else {
+                setHabitsInput({ mealPlan: false, activity: "", hydration: "" }); // Reset
+            }
+        });
+    }, [viewingDate, historyData]); // Reload when date or history cache changes
+
     // --- LOGIC: DATA IO ---
 
     const getLogKey = (date: string) => `yukti_daily_log_${date}`;
-    // Legacy Key: `yukti_med_log_${date}` -> { name: true }
 
     const loadDailyLog = async (date: string): Promise<DailyLog> => {
         const key = getLogKey(date);
-        const legacyKey = `yukti_med_log_${date}`;
-
         const stored = localStorage.getItem(key);
-        if (stored) {
-            return JSON.parse(stored);
-        }
+        if (stored) return JSON.parse(stored);
 
-        // MIGRATION: Check legacy
-        const legacy = localStorage.getItem(legacyKey);
-        if (legacy) {
-            const parsed = JSON.parse(legacy);
-            // key:value -> name:true
-            const takenNames = Object.keys(parsed).filter(k => parsed[k] === true);
-            const newLog: DailyLog = { meds: takenNames, vitals: {} };
-            // Save migrated format immediately? Optional. Let's return it.
-            return newLog;
-        }
+        // Fallback to history cache if available
+        if (historyData[date]) return historyData[date];
 
         return { meds: [], vitals: {} };
     };
 
     const loadHistoryContext = () => {
-        // Load all logs for keys starting with prefix (naive but works for MVP localstorage)
         const cache: Record<string, DailyLog> = {};
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -158,15 +152,6 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
                 try {
                     cache[date] = JSON.parse(localStorage.getItem(key) || "{}");
                 } catch (e) { }
-            } else if (key?.startsWith("yukti_med_log_")) {
-                // Legacy
-                const date = key.replace("yukti_med_log_", "");
-                if (!cache[date]) { // Don't overwrite if new format exists
-                    try {
-                        const parsed = JSON.parse(localStorage.getItem(key) || "{}");
-                        cache[date] = { meds: Object.keys(parsed).filter(k => parsed[k]), vitals: {} };
-                    } catch (e) { }
-                }
             }
         }
         setHistoryData(cache);
@@ -174,28 +159,28 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
 
     const saveLog = (date: string, log: DailyLog) => {
         localStorage.setItem(getLogKey(date), JSON.stringify(log));
-        // Update state cache
+        // Update state cache and current view
         setHistoryData(prev => ({ ...prev, [date]: log }));
-        if (date === todayKey) setTodayLog(log);
+        setActiveLog(log);
     };
 
     // --- LOGIC: ACTIONS ---
 
     const toggleMed = (medName: string) => {
-        const isTaken = todayLog.meds.includes(medName);
+        const isTaken = activeLog.meds.includes(medName);
         let newMedsList;
         if (isTaken) {
-            newMedsList = todayLog.meds.filter(m => m !== medName);
+            newMedsList = activeLog.meds.filter(m => m !== medName);
         } else {
-            newMedsList = [...todayLog.meds, medName];
+            newMedsList = [...activeLog.meds, medName];
         }
-        const newLog = { ...todayLog, meds: newMedsList };
-        saveLog(todayKey, newLog);
+        const newLog = { ...activeLog, meds: newMedsList };
+        saveLog(viewingDate, newLog);
     };
 
     const saveVitalsAndHabits = () => {
         const newLog = {
-            ...todayLog,
+            ...activeLog,
             vitals: statsInput,
             habits: {
                 mealPlan: habitsInput.mealPlan,
@@ -203,8 +188,8 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
                 hydration: Number(habitsInput.hydration)
             }
         };
-        saveLog(todayKey, newLog);
-        alert("Wellness Log Updated! ✅");
+        saveLog(viewingDate, newLog);
+        alert(`Log updated for ${viewingDate}! ✅`);
     };
 
     const saveMedsList = (newMeds: Medication[]) => {
@@ -212,13 +197,14 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
         localStorage.setItem("yukti_active_meds", JSON.stringify(newMeds));
     };
 
-    const archiveMed = (med: Medication) => {
-        if (confirm("Stop taking this medicine? It will be moved to history.")) {
-            const updated = meds.map(m => m.name === med.name ? { ...m, status: "Archived" as const } : m);
-            saveMedsList(updated);
-        }
+    const changeDate = (days: number) => {
+        const current = new Date(viewingDate);
+        current.setDate(current.getDate() + days);
+        setViewingDate(current.toISOString().split('T')[0]);
     };
 
+    // --- MANAGE MEDS LOGIC ---
+    // (Same as before)
     const updateMed = (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingMed) return;
@@ -230,15 +216,11 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
     const addMed = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newMed.name) return;
-
-        // Auto-generate "Timing" string if empty, for backward compatibility display
         let derivedTiming = newMed.timing;
         if (!derivedTiming && newMed.slots && newMed.slots.length > 0) {
             derivedTiming = `${newMed.slots.join("-")} (${newMed.relationToFood})`;
         }
-
         const toAdd = { ...newMed, timing: derivedTiming, startDate: new Date().toISOString().split('T')[0] };
-
         const updated = [...meds, toAdd];
         saveMedsList(updated);
         setIsAddingMed(false);
@@ -257,45 +239,40 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
         const days = [];
-        // Empty slots
         for (let i = 0; i < firstDay; i++) days.push(<div key={`empty-${i}`} />);
 
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const log = historyData[dateStr];
             const isToday = dateStr === todayKey;
-            const isSelected = dateStr === selectedDate;
+            const isSelected = dateStr === viewingDate;
 
-            // Scoring
-            let statusParams = "bg-slate-50 text-slate-400"; // Default (Future/No Data)
+            let statusParams = "bg-slate-50 text-slate-400";
             let dotColor = null;
 
-            // Only score PAST or TODAY
             if (new Date(dateStr) <= new Date()) {
-                const activeMedsCount = meds.filter(m => m.status === 'Active' || !m.status).length; // Estimate denominator
+                const activeMedsRaw = localStorage.getItem("yukti_active_meds");
+                const currentMedsList = activeMedsRaw ? JSON.parse(activeMedsRaw) : [];
+                const activeMedsCount = currentMedsList.filter((m: any) => !m.status || m.status === 'Active').length || 1;
+
                 if (log) {
                     const takenCount = log.meds.length;
                     const hasVitals = Object.keys(log.vitals || {}).length > 0;
-
-                    if (takenCount >= activeMedsCount && activeMedsCount > 0) {
-                        statusParams = "bg-emerald-100 text-emerald-700 font-bold border-emerald-200"; // Perfect
+                    if (takenCount >= activeMedsCount) {
+                        statusParams = "bg-emerald-100 text-emerald-700 font-bold border-emerald-200";
                     } else if (takenCount > 0) {
-                        statusParams = "bg-orange-100 text-orange-700 font-bold border-orange-200"; // Partial
+                        statusParams = "bg-orange-100 text-orange-700 font-bold border-orange-200";
                     } else {
-                        statusParams = "bg-red-50 text-red-400 border-red-100"; // Missed
+                        statusParams = "bg-red-50 text-red-400 border-red-100";
                     }
-
                     if (hasVitals) dotColor = "bg-blue-500";
-                } else if (dateStr !== todayKey) {
-                    // No log in past -> Assuming missed? Or just grey
-                    statusParams = "bg-slate-100 text-slate-400";
                 }
             }
 
             days.push(
                 <button
                     key={d}
-                    onClick={() => { setSelectedDate(dateStr); }}
+                    onClick={() => { setViewingDate(dateStr); setActiveTab("daily"); }} // Go to daily view on click
                     className={`h-10 w-10 md:h-12 md:w-12 rounded-xl flex items-center justify-center relative text-sm transition-all border ${isSelected ? "ring-2 ring-slate-900 z-10 scale-110" : ""
                         } ${statusParams}`}
                 >
@@ -318,18 +295,12 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
                 <div className="grid grid-cols-7 gap-2">
                     {days}
                 </div>
-                <div className="flex gap-4 justify-center mt-4 text-[10px] text-slate-500 font-medium uppercase tracking-wide">
-                    <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-400" /> Perfect</span>
-                    <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-400" /> Partial</span>
-                    <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500" /> Vitals Logged</span>
-                </div>
             </div>
         );
     };
 
     // --- MAIN RENDER ---
     const activeMeds = meds.filter(m => !m.status || m.status === 'Active');
-    const archivedMeds = meds.filter(m => m.status === 'Archived');
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -338,7 +309,7 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-100/50 p-1.5 rounded-2xl">
                 <div className="flex gap-1 w-full md:w-auto">
                     {[
-                        { id: "today", label: "Today's Care", icon: Check },
+                        { id: "daily", label: "Daily Care", icon: Check },
                         { id: "calendar", label: "History", icon: CalendarIcon },
                         { id: "manage", label: "Manage Meds", icon: pillIcon(meds.length) }
                     ].map((tab) => (
@@ -356,34 +327,46 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
                     ))}
                 </div>
 
-                {/* Test Call (Discrete) */}
+                {/* Test Call */}
                 <button onClick={onTriggerCall} className="flex text-xs text-slate-400 hover:text-orange-600 gap-1 items-center px-3 border border-slate-200/50 rounded-lg py-1 md:border-none md:p-0">
                     <Clock size={12} /> <span className="hidden md:inline">Test Reminder</span><span className="md:hidden">Test Call</span>
                 </button>
             </div>
 
-            {/* --- TAB 1: TODAY'S CARE --- */}
-            {activeTab === "today" && (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    {/* LEFT: Meds Checklist (7 cols) */}
-                    <div className="md:col-span-7 space-y-4">
-                        <div className="flex justify-between items-center px-1">
-                            <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                                <Pill size={18} className="text-orange-500" /> Daily Medicines
+            {/* --- TAB 1: DAILY CARE (Dynamic Date) --- */}
+            {activeTab === "daily" && (
+                <div className="space-y-6">
+                    {/* DATE NAVIGATOR */}
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm flex items-center justify-between">
+                        <button onClick={() => changeDate(-1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500"><ChevronLeft size={20} /></button>
+                        <div className="text-center">
+                            <h3 className="text-lg font-bold text-slate-900">
+                                {viewingDate === todayKey ? "Today, " : ""}{new Date(viewingDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                             </h3>
-                            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-medium">
-                                {todayLog.meds.length} / {activeMeds.length} Taken
-                            </span>
+                            {viewingDate !== todayKey && (
+                                <button onClick={() => setViewingDate(todayKey)} className="text-xs font-bold text-orange-600 uppercase tracking-wide mt-1 hover:underline">
+                                    Return to Today
+                                </button>
+                            )}
                         </div>
+                        <button onClick={() => changeDate(1)} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500"><ChevronRight size={20} /></button>
+                    </div>
 
-                        {activeMeds.length === 0 ? (
-                            <div className="p-8 text-center bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400">
-                                No active medicines. Go to "Manage" to add or restore.
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                        {/* LEFT: Meds Checklist (7 cols) */}
+                        <div className="md:col-span-7 space-y-4">
+                            <div className="flex justify-between items-center px-1">
+                                <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                                    <Pill size={18} className="text-orange-500" /> Daily Medicines
+                                </h3>
+                                <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-medium">
+                                    {activeLog.meds.length} / {activeMeds.length} Taken
+                                </span>
                             </div>
-                        ) : (
+
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                                 {activeMeds.map((med, idx) => {
-                                    const isTaken = todayLog.meds.includes(med.name);
+                                    const isTaken = activeLog.meds.includes(med.name);
                                     return (
                                         <motion.div
                                             key={idx}
@@ -410,140 +393,122 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
                                                         ) : (
                                                             <span>• {med.timing}</span>
                                                         )}
-                                                        {med.relationToFood && <span className="bg-orange-50 text-orange-700 px-1.5 rounded text-[10px]">{med.relationToFood}</span>}
                                                     </div>
-                                                    {med.remarks && <p className="text-[10px] text-slate-400 mt-0.5 italic">"{med.remarks}"</p>}
                                                 </div>
                                             </div>
-                                            {med.type === "Acute" && (
-                                                <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-1 rounded-full font-bold uppercase tracking-wide">
-                                                    Acute
-                                                </span>
-                                            )}
                                         </motion.div>
                                     );
                                 })}
                             </div>
-                        )}
-                    </div>
+                        </div>
 
-                    {/* RIGHT: Vitals & Habits (5 cols) */}
-                    <div className="md:col-span-5 space-y-6">
+                        {/* RIGHT: Vitals & Habits (5 cols) */}
+                        <div className="md:col-span-5 space-y-6">
+                            {/* 1. VITALS CARD */}
+                            <div className="bg-blue-50/50 p-6 rounded-3xl border border-blue-100 relative">
+                                <h3 className="font-bold text-blue-900 flex items-center gap-2 mb-4">
+                                    <Activity size={18} className="text-blue-600" /> Vitals for {new Date(viewingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </h3>
 
-                        {/* 1. VITALS CARD */}
-                        <div className="bg-blue-50/50 p-6 rounded-3xl border border-blue-100 relative">
-                            <h3 className="font-bold text-blue-900 flex items-center gap-2 mb-4">
-                                <Activity size={18} className="text-blue-600" /> Log Vitals
-                            </h3>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-blue-400 uppercase tracking-wide mb-1 block">Blood Pressure (Sys/Dia)</label>
-                                    <div className="flex gap-2">
-                                        <div className="relative flex-1">
-                                            <Heart size={14} className="absolute left-3 top-3 text-slate-400" />
-                                            <input
-                                                type="number"
-                                                placeholder="120"
-                                                value={statsInput.bpSys || ""}
-                                                onChange={e => setStatsInput({ ...statsInput, bpSys: Number(e.target.value) })}
-                                                className="w-full pl-9 pr-2 py-2 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-semibold text-slate-700"
-                                            />
-                                        </div>
-                                        <span className="text-slate-300 text-xl font-light">/</span>
-                                        <div className="relative flex-1">
-                                            <input
-                                                type="number"
-                                                placeholder="80"
-                                                value={statsInput.bpDia || ""}
-                                                onChange={e => setStatsInput({ ...statsInput, bpDia: Number(e.target.value) })}
-                                                className="w-full px-3 py-2 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-semibold text-slate-700"
-                                            />
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs font-bold text-blue-400 uppercase tracking-wide mb-1 block">Blood Pressure (Sys/Dia)</label>
+                                        <div className="flex gap-2">
+                                            <div className="relative flex-1">
+                                                <input
+                                                    type="number"
+                                                    placeholder="120"
+                                                    value={statsInput.bpSys || ""}
+                                                    onChange={e => setStatsInput({ ...statsInput, bpSys: Number(e.target.value) })}
+                                                    className="w-full px-3 py-2 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-semibold text-slate-700"
+                                                />
+                                            </div>
+                                            <span className="text-slate-300 text-xl font-light">/</span>
+                                            <div className="relative flex-1">
+                                                <input
+                                                    type="number"
+                                                    placeholder="80"
+                                                    value={statsInput.bpDia || ""}
+                                                    onChange={e => setStatsInput({ ...statsInput, bpDia: Number(e.target.value) })}
+                                                    className="w-full px-3 py-2 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-semibold text-slate-700"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-xs font-bold text-blue-400 uppercase tracking-wide mb-1 block">Sugar</label>
-                                        <div className="relative">
-                                            <Droplet size={14} className="absolute left-3 top-3 text-slate-400" />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs font-bold text-blue-400 uppercase tracking-wide mb-1 block">Sugar</label>
                                             <input
                                                 type="number"
                                                 placeholder="100"
                                                 value={statsInput.sugar || ""}
                                                 onChange={e => setStatsInput({ ...statsInput, sugar: Number(e.target.value) })}
-                                                className="w-full pl-9 pr-2 py-2 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-semibold text-slate-700"
+                                                className="w-full px-3 py-2 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-semibold text-slate-700"
                                             />
                                         </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-blue-400 uppercase tracking-wide mb-1 block">Weight</label>
-                                        <div className="relative">
-                                            <Scale size={14} className="absolute left-3 top-3 text-slate-400" />
+                                        <div>
+                                            <label className="text-xs font-bold text-blue-400 uppercase tracking-wide mb-1 block">Weight</label>
                                             <input
                                                 type="number"
                                                 placeholder="65"
                                                 value={statsInput.weight || ""}
                                                 onChange={e => setStatsInput({ ...statsInput, weight: Number(e.target.value) })}
-                                                className="w-full pl-9 pr-2 py-2 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-semibold text-slate-700"
+                                                className="w-full px-3 py-2 rounded-xl border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-semibold text-slate-700"
                                             />
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* 2. HABITS CARD */}
-                        <div className="bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100 relative">
-                            <h3 className="font-bold text-emerald-900 flex items-center gap-2 mb-4">
-                                <Activity size={18} className="text-emerald-600" /> Lifestyle & Habits
-                            </h3>
-
-                            <div className="space-y-4">
-                                {/* Meal Plan Toggle */}
-                                <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-100/50">
-                                    <label className="text-sm font-semibold text-slate-700">Followed Meal Plan?</label>
-                                    <button
-                                        onClick={() => setHabitsInput({ ...habitsInput, mealPlan: !habitsInput.mealPlan })}
-                                        className={`w-12 h-7 rounded-full transition-colors relative ${habitsInput.mealPlan ? "bg-emerald-500" : "bg-slate-200"}`}
-                                    >
-                                        <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${habitsInput.mealPlan ? "translate-x-5" : "translate-x-0"}`} />
-                                    </button>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1 block">Activity (Mins)</label>
-                                        <input
-                                            type="number"
-                                            placeholder="30"
-                                            value={habitsInput.activity}
-                                            onChange={e => setHabitsInput({ ...habitsInput, activity: e.target.value })}
-                                            className="w-full px-3 py-2 rounded-xl border border-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm font-semibold text-slate-700"
-                                        />
+                            {/* 2. HABITS CARD */}
+                            <div className="bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100 relative">
+                                <h3 className="font-bold text-emerald-900 flex items-center gap-2 mb-4">
+                                    <Activity size={18} className="text-emerald-600" /> Lifestyle & Habits
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-100/50">
+                                        <label className="text-sm font-semibold text-slate-700">Followed Meal Plan?</label>
+                                        <button
+                                            onClick={() => setHabitsInput({ ...habitsInput, mealPlan: !habitsInput.mealPlan })}
+                                            className={`w-12 h-7 rounded-full transition-colors relative ${habitsInput.mealPlan ? "bg-emerald-500" : "bg-slate-200"}`}
+                                        >
+                                            <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${habitsInput.mealPlan ? "translate-x-5" : "translate-x-0"}`} />
+                                        </button>
                                     </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1 block">Water (Glasses)</label>
-                                        <input
-                                            type="number"
-                                            placeholder="8"
-                                            value={habitsInput.hydration}
-                                            onChange={e => setHabitsInput({ ...habitsInput, hydration: e.target.value })}
-                                            className="w-full px-3 py-2 rounded-xl border border-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm font-semibold text-slate-700"
-                                        />
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1 block">Activity (Mins)</label>
+                                            <input
+                                                type="number"
+                                                placeholder="30"
+                                                value={habitsInput.activity}
+                                                onChange={e => setHabitsInput({ ...habitsInput, activity: e.target.value })}
+                                                className="w-full px-3 py-2 rounded-xl border border-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm font-semibold text-slate-700"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-emerald-600 uppercase tracking-wide mb-1 block">Water (Glasses)</label>
+                                            <input
+                                                type="number"
+                                                placeholder="8"
+                                                value={habitsInput.hydration}
+                                                onChange={e => setHabitsInput({ ...habitsInput, hydration: e.target.value })}
+                                                className="w-full px-3 py-2 rounded-xl border border-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm font-semibold text-slate-700"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* SAVE BUTTON */}
-                        <button
-                            onClick={saveVitalsAndHabits}
-                            className="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-sm shadow-md transition-all active:scale-[0.98]"
-                        >
-                            Save Daily Log
-                        </button>
+                            <button
+                                onClick={saveVitalsAndHabits}
+                                className="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-sm shadow-md transition-all active:scale-[0.98]"
+                            >
+                                Save Log for {new Date(viewingDate).toLocaleDateString()}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -555,76 +520,15 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
                         {renderCalendar()}
                     </div>
                     <div className="md:col-span-5">
-                        {selectedDate ? (
-                            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-lg h-full">
-                                <h3 className="text-xl font-bold text-slate-900 mb-1">
-                                    {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                                </h3>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-6">Day Summary</p>
-
-                                {/* DATA LOAD */}
-                                {(() => {
-                                    const log = historyData[selectedDate] || { meds: [], vitals: {} };
-                                    const hasData = log.meds.length > 0 || Object.keys(log.vitals || {}).length > 0;
-                                    if (!hasData && selectedDate !== todayKey) return <p className="text-slate-400 italic">No data recorded for this day.</p>;
-
-                                    return (
-                                        <div className="space-y-6">
-                                            <div>
-                                                <h4 className="font-semibold text-slate-900 flex items-center gap-2 mb-3">
-                                                    <Pill size={16} className="text-orange-500" />
-                                                    Medicines ({log.meds.length})
-                                                </h4>
-                                                {log.meds.length > 0 ? (
-                                                    <ul className="space-y-2">
-                                                        {log.meds.map((m, i) => (
-                                                            <li key={i} className="text-sm text-slate-600 flex items-center gap-2">
-                                                                <Check size={14} className="text-emerald-500" /> {m}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                ) : (
-                                                    <p className="text-sm text-orange-400">No medicines logged.</p>
-                                                )}
-                                            </div>
-
-                                            <div className="border-t border-slate-100 pt-4">
-                                                <h4 className="font-semibold text-slate-900 flex items-center gap-2 mb-3">
-                                                    <Activity size={16} className="text-blue-500" />
-                                                    Vitals
-                                                </h4>
-                                                {Object.keys(log.vitals || {}).length > 0 ? (
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        {log.vitals.bpSys && (
-                                                            <div className="bg-slate-50 p-2 rounded-lg">
-                                                                <p className="text-[10px] text-slate-400 uppercase">BP</p>
-                                                                <p className="font-bold text-slate-700">{log.vitals.bpSys}/{log.vitals.bpDia}</p>
-                                                            </div>
-                                                        )}
-                                                        {log.vitals.sugar && (
-                                                            <div className="bg-slate-50 p-2 rounded-lg">
-                                                                <p className="text-[10px] text-slate-400 uppercase">Sugar</p>
-                                                                <p className="font-bold text-slate-700">{log.vitals.sugar} <span className="text-[10px]">mg/dL</span></p>
-                                                            </div>
-                                                        )}
-                                                        {log.vitals.weight && (
-                                                            <div className="bg-slate-50 p-2 rounded-lg">
-                                                                <p className="text-[10px] text-slate-400 uppercase">Weight</p>
-                                                                <p className="font-bold text-slate-700">{log.vitals.weight} <span className="text-[10px]">kg</span></p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm text-slate-400">No vitals logged.</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-lg h-full flex flex-col justify-center items-center text-center">
+                            <h3 className="text-xl font-bold text-slate-900 mb-2">History Mode</h3>
+                            <p className="text-slate-500 mb-6">Select a date on the calendar to view or edit its detailed log.</p>
+                            <div className="flex gap-2 text-sm text-slate-400">
+                                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-400" /> Perfect</span>
+                                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-400" /> Partial</span>
+                                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-400" /> Missed</span>
                             </div>
-                        ) : (
-                            <div className="h-full flex items-center justify-center text-slate-400 italic">Select a date to view details.</div>
-                        )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -801,18 +705,16 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
                                                 </div>
                                                 <div>
                                                     <label className="text-xs font-bold text-slate-500 uppercase">Type</label>
-                                                    <select value={editingMed.type || "Chronic"} onChange={e => setEditingMed({ ...editingMed, type: e.target.value as any })} className="w-full mt-1 p-2 border rounded-lg text-sm">
-                                                        <option value="Chronic">Chronic (Long-term)</option>
-                                                        <option value="Acute">Acute (Short-term)</option>
+                                                    <select value={editingMed.type} onChange={e => setEditingMed({ ...editingMed, type: e.target.value as any })} className="w-full mt-1 p-2 border rounded-lg text-sm">
+                                                        <option value="Chronic">Chronic</option>
+                                                        <option value="Acute">Acute</option>
                                                     </select>
                                                 </div>
                                             </div>
-
                                             <div>
                                                 <label className="text-xs font-bold text-slate-500 uppercase">Remarks</label>
-                                                <input value={editingMed.remarks || ""} onChange={e => setEditingMed({ ...editingMed, remarks: e.target.value })} className="w-full mt-1 p-2 border rounded-lg text-sm" placeholder="e.g. Use warm water" />
+                                                <input value={editingMed.remarks || ""} onChange={e => setEditingMed({ ...editingMed, remarks: e.target.value })} className="w-full mt-1 p-2 border rounded-lg text-sm" />
                                             </div>
-
                                             <div className="flex gap-2 justify-end pt-2">
                                                 <button type="button" onClick={() => setEditingMed(null)} className="px-4 py-2 text-slate-500 text-sm">Cancel</button>
                                                 <button type="submit" className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium">Save Changes</button>
@@ -822,36 +724,30 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
                                 );
                             }
 
+                            // DISPLAY CARD
                             return (
-                                <div key={idx} className={`p-4 rounded-xl border flex items-center justify-between ${med.status === 'Archived' ? "bg-slate-50 border-slate-200 opacity-60" : "bg-white border-slate-200"}`}>
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500">
+                                <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between group hover:border-orange-200 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-10 w-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
                                             <Pill size={20} />
                                         </div>
                                         <div>
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-bold text-slate-900">{med.name}</p>
-                                                {med.status === 'Archived' && <span className="text-[10px] bg-slate-200 text-slate-500 px-2 py-0.5 rounded font-bold">ARCHIVED</span>}
-                                            </div>
-                                            <p className="text-xs text-slate-500">{med.dosage} • {med.timing} • {med.type || "Chronic"}</p>
+                                            <h4 className="font-bold text-slate-900">{med.name}</h4>
+                                            <p className="text-xs text-slate-500">{med.dosage} • {med.timing}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        {med.status === 'Archived' ? (
-                                            <button onClick={() => {
-                                                const updated = meds.map(m => m.name === med.name ? { ...m, status: "Active" as const } : m);
+                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setEditingMed(med)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+                                            <Edit3 size={16} />
+                                        </button>
+                                        <button onClick={() => {
+                                            if (confirm("Stop taking this medicine? It will be moved to history.")) {
+                                                const updated = meds.map(m => m.name === med.name ? { ...m, status: "Archived" as const } : m);
                                                 saveMedsList(updated);
-                                            }} className="text-xs bg-white border px-3 py-1.5 rounded-lg font-medium hover:bg-slate-50">Restore</button>
-                                        ) : (
-                                            <>
-                                                <button onClick={() => setEditingMed(med)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
-                                                    <Edit3 size={16} />
-                                                </button>
-                                                <button onClick={() => archiveMed(med)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </>
-                                        )}
+                                            }
+                                        }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                                            <Trash2 size={16} />
+                                        </button>
                                     </div>
                                 </div>
                             );
@@ -863,12 +759,11 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
     );
 }
 
-// Helper for dynamic icon
 function pillIcon(count: number) {
-    return (props: any) => (
+    return ({ size }: { size: number }) => (
         <div className="relative">
-            <Pill {...props} />
-            {count > 0 && <span className="absolute -top-1 -right-2 bg-orange-500 text-white text-[8px] h-3 w-3 rounded-full flex items-center justify-center">{count}</span>}
+            <Pill size={size} />
+            {count > 0 && <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-orange-500 text-[8px] text-white">{count}</span>}
         </div>
-    );
+    )
 }
