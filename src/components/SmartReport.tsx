@@ -3,8 +3,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import ReactMarkdown from "react-markdown";
-import { UploadCloud, Loader2, FileText, AlertCircle, Lock, ArrowRight, ShieldCheck, Pill, Brain, Activity, Clock, FileSearch, Trash2 } from "lucide-react";
+import { UploadCloud, Loader2, FileText, AlertCircle, Lock, ArrowRight, ShieldCheck, Pill, Brain, Activity, Clock, FileSearch, Trash2, Milestone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { HealthTrendChart } from "./HealthTrendChart";
 
 interface SmartReportProps {
     onNavigate?: () => void;
@@ -208,7 +209,7 @@ export function SmartReport({ onNavigate }: SmartReportProps) {
             <div className="text-center md:text-left flex items-center justify-between">
                 <div>
                     <h2 className="text-xl md:text-2xl font-semibold text-slate-900 flex items-center gap-2">
-                        Yukti AI Analysis
+                        Reports & Trends
                         <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Beta</span>
                     </h2>
                     <p className="text-slate-600 mt-1">Context-Aware Medical Document Analysis</p>
@@ -218,6 +219,9 @@ export function SmartReport({ onNavigate }: SmartReportProps) {
                     <span>Memory Active ({history.length} docs)</span>
                 </div>
             </div>
+
+            {/* DASHBOARD: TRENDS */}
+            <HealthTrendChart />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* LEFT: Upload Section (4 cols) */}

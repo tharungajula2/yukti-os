@@ -1,10 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles, Stethoscope, Phone, ArrowRight, Activity, Utensils } from "lucide-react";
+import { Sparkles, Stethoscope, Phone, ArrowRight, Activity, Utensils, Moon } from "lucide-react";
 import { useState } from "react";
 
+import { useToast } from "./ui/Toast";
+
 export function CareTeam() {
+    const { showToast } = useToast();
+
     return (
         <div className="max-w-6xl mx-auto space-y-8 pb-12">
             {/* HEADER */}
@@ -46,7 +50,7 @@ export function CareTeam() {
                     status={<span className="text-slate-500 text-xs font-semibold">Medical Oversight</span>}
                     bio="20+ years in Elderly Care. Leads your monthly health review."
                     actionLabel="Request Consult"
-                    onAction={() => alert("Request sent to Dr. Aruna. Clinic will confirm slot.")}
+                    onAction={() => showToast("Request sent to Dr. Aruna. Clinic will confirm slot.", "success")}
                 />
 
                 {/* 3. MS. SANYA KAPOOR */}
@@ -58,7 +62,7 @@ export function CareTeam() {
                     status={<span className="text-slate-500 text-xs font-semibold">Diet & Gut Health</span>}
                     bio="Specialist in diabetic-friendly meal plans and gut health."
                     actionLabel="Request Plan Change"
-                    onAction={() => alert("Request sent to Sanya. She will review your current plan.")}
+                    onAction={() => showToast("Request sent to Sanya. She will review your current plan.", "success")}
                 />
 
                 {/* 4. COACH VIKRAM SINGH */}
@@ -70,10 +74,9 @@ export function CareTeam() {
                     status={<span className="text-slate-500 text-xs font-semibold">Physio & Fall Prevention</span>}
                     bio="Focuses on balance, strength, and safe movement protocols."
                     actionLabel="View Exercises"
-                    onAction={() => alert("Opening Mobility Module... (Coming Soon)")}
+                    onAction={() => showToast("Opening Mobility Module... (Coming Soon)", "info")}
                 />
 
-                {/* 5. AMIT VERMA */}
                 <TeamCard
                     icon={<Phone size={32} />}
                     iconColor="bg-slate-100 text-slate-600"
@@ -82,7 +85,19 @@ export function CareTeam() {
                     status={<span className="text-slate-500 text-xs font-semibold">Logistics & Support</span>}
                     bio="Your point of contact for lab tests, medicines, and logistics."
                     actionLabel="Call Now"
-                    onAction={() => alert("Calling Amit Verma...")}
+                    onAction={() => showToast("Calling Amit Verma...", "info")}
+                />
+
+                {/* 6. DR. ESHA SETHI */}
+                <TeamCard
+                    icon={<Moon size={32} />}
+                    iconColor="bg-purple-100 text-purple-600"
+                    name="Dr. Esha Sethi"
+                    role="Mind & Sleep Coach"
+                    status={<span className="text-slate-500 text-xs font-semibold">Stress & Sleep Hygiene</span>}
+                    bio="Specialist in sleep architecture and anxiety management for seniors."
+                    actionLabel="Book Therapy Session"
+                    onAction={() => showToast("Request sent to Dr. Esha. Session scheduling initiated.", "success")}
                 />
 
             </div>

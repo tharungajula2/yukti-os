@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Pill, Check, Calendar as CalendarIcon, PlusCircle, AlertCircle, Clock, Trash2, Activity, Heart, Scale, Droplet, ChevronLeft, ChevronRight, Edit3, ArrowLeft } from "lucide-react";
+import { Pill, Check, Calendar as CalendarIcon, PlusCircle, AlertCircle, Clock, Trash2, Activity, Heart, Scale, Droplet, ChevronLeft, ChevronRight, Edit3, ArrowLeft, Watch, Bluetooth } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useToast } from "./ui/Toast";
 
 interface Medication {
     name: string;
@@ -41,6 +42,7 @@ interface MedicationTrackerProps {
 }
 
 export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
+    const { showToast } = useToast();
     // --- STATE ---
     const [meds, setMeds] = useState<Medication[]>([]);
     const [activeTab, setActiveTab] = useState<"daily" | "calendar" | "manage">("daily");
@@ -166,6 +168,18 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
 
     // --- LOGIC: ACTIONS ---
 
+    const simulateDeviceSync = (device: 'cgm' | 'watch') => {
+        if (device === 'cgm') {
+            setStatsInput(prev => ({ ...prev, sugar: 110 }));
+            showToast("⚡ Synced 110 mg/dL from Freestyle Libre", "success");
+        }
+        if (device === 'watch') {
+            setStatsInput(prev => ({ ...prev, weight: 64.5 }));
+            setHabitsInput(prev => ({ ...prev, activity: "45" }));
+            showToast("⚡ Synced Activity & Weight from Apple Health", "success");
+        }
+    };
+
     const toggleMed = (medName: string) => {
         const isTaken = activeLog.meds.includes(medName);
         let newMedsList;
@@ -189,7 +203,7 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
             }
         };
         saveLog(viewingDate, newLog);
-        alert(`Log updated for ${viewingDate}! ✅`);
+        showToast(`Log updated for ${viewingDate}! ✅`, "success");
     };
 
     const saveMedsList = (newMeds: Medication[]) => {
@@ -461,7 +475,67 @@ export function MedicationTracker({ onTriggerCall }: MedicationTrackerProps) {
                                 </div>
                             </div>
 
-                            {/* 2. HABITS CARD */}
+                            {/* 2. DEVICE SYNC (Moved Up & Compacted) */}
+                            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-5">
+                                    <Activity size={80} />
+                                </div>
+                                <div className="relative z-10 mb-4">
+                                    <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                                        <Bluetooth size={18} className="text-blue-600" /> Connected Devices
+                                    </h3>
+                                </div>
+
+                                <div className="flex flex-col gap-3 relative z-10">
+                                    {/* Card 1: CGM */}
+                                    <div className="bg-white p-3 rounded-2xl border border-emerald-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                                                <Activity size={16} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-900 text-xs">FreeStyle Libre</h4>
+                                                <p className="text-[10px] text-slate-500 font-medium">110 mg/dL (Now)</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => simulateDeviceSync('cgm')} className="text-[10px] font-bold text-white bg-emerald-500 px-2 py-1 rounded-full shadow-sm hover:bg-emerald-600 active:scale-95 transition-all flex items-center gap-1">
+                                            Sync
+                                        </button>
+                                    </div>
+
+                                    {/* Card 2: Smart Watch */}
+                                    <div className="bg-white p-3 rounded-2xl border border-blue-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                                <Watch size={16} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-900 text-xs">Apple Watch</h4>
+                                                <p className="text-[10px] text-slate-500 font-medium">Steps, HR, Wgt</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => simulateDeviceSync('watch')} className="text-[10px] font-bold text-white bg-blue-500 px-2 py-1 rounded-full shadow-sm hover:bg-blue-600 active:scale-95 transition-all flex items-center gap-1">
+                                            Sync
+                                        </button>
+                                    </div>
+
+                                    {/* Card 3: BP Monitor (Disconnected) */}
+                                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 border-dashed flex items-center justify-between opacity-70 hover:opacity-100 transition-all cursor-pointer">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-slate-200 text-slate-500 rounded-lg">
+                                                <Heart size={16} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-700 text-xs">Omron BP</h4>
+                                                <p className="text-[10px] text-slate-400 font-medium">Disconnected</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] font-bold text-orange-400">Pair</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 3. HABITS CARD (Moved Down) */}
                             <div className="bg-emerald-50/50 p-6 rounded-3xl border border-emerald-100 relative">
                                 <h3 className="font-bold text-emerald-900 flex items-center gap-2 mb-4">
                                     <Activity size={18} className="text-emerald-600" /> Lifestyle & Habits

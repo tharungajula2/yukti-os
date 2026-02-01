@@ -1,7 +1,7 @@
 # Yukti OS: The Complete Product Master Guide
-**Version:** 2.0 (Deep Dive Edition)  
-**Date:** January 25, 2026  
-**Audience:** Product Managers, Engineering Leads, & Stakeholders
+**Version:** 3.0 (Interactive Intelligence Release)  
+**Date:** February 1, 2026  
+**Audience:** Product Managers, QA Engineers, & Developers
 
 ---
 
@@ -16,149 +16,136 @@ Most health apps fail the elderly because they are **Context-Blind**. They treat
 
 ---
 
-## 2. A Day in the Life: User Journey
-To understand the product, let's walk through a typical day with our target persona: **Mukesh (72, Diabetic, History of Falls)**.
+## 2. Core Modules & Feature Logic
 
-### Morning: The "Passive" Safety Net
-*   Mukesh wakes up. He checks Yukti on his phone.
-*   **Medication Tracker:** He sees his morning pills (Metformin, Telmisartan). He taps "Taken".
-*   **The System:** Validates he took them. If he misses, the **Call Overlay** (Simulated Call) would trigger at 10 AM to remind him.
-
-### Afternoon: The "Active" Intervention
-*   Mukesh visits a clinic and gets a physical prescription.
-*   **Smart Report:** He photos the prescription and uploads it to Yukti.
-*   **The "Brain":** 
-    1.  Yukti reads the scribbled note: *"Add Atorvastatin 10mg"*.
-    2.  **Context Check:** It knows Mukesh is already taking 4 meds.
-    3.  **Conflict Scan:** It checks if Atorvastatin conflicts with his existing list (Future Roadmap).
-    4.  **Action:** It auto-adds the new med to his daily tracker.
-
-### Evening: The "Holistic" View
-*   Mukesh's daughter visits. She doesn't want to read 50 loose papers.
-*   **Holistic Summary:** She taps one button. Yukti synthesizes the last 6 months of reports into one paragraph: *"Mukesh's sugar control has worsened (HbA1c up 0.5%) since his fall last month. Recommended: Increase mobility safely."*
-*   **Value:** Instant clarity from chaos.
-
----
-
-## 3. Product Pillars: Deep Dive
-
-We have 4 modules that work together. Here is the deep engineering and product logic behind them.
+Our system is divided into 5 interactive modules. Each module is designed for **"Passive Collection, Active Intervention"**.
 
 ### Module A: The Clinical Engine (Risk Engine)
 **Purpose:** To establish the "Baseline". Without this, the AI is flying blind.
-
 *   **The Design:** A digital intake form mimicking a Geriatrician's first assessment.
-*   **The Questions:** We ask **15 calibrated questions** covering 10 domains:
-    *   *Metabolic* (Diabetes/BP) - Highest Weightage
-    *   *Frailty* (Falls/Hospitalization)
-    *   *Resilience* (Age/Recovery speed)
-    *   *Lifestyle* (Sleep/Diet)
-*   **The Algorithm (How we score):**
-    *   Each answer has a weighted score (0, 5, 10, or 15).
-    *   **Max Score:** 175.
-    *   **Risk Logic:**
-        *   `0 - 20`: **Healthy Baseline** (Green)
-        *   `21 - 40`: **Moderate Attention** (Amber)
-        *   `> 40`: **High Risk** (Red) - *Example: Mukesh is 45.*
-*   **Safety Lock:** The "Smart Reports" module is **LOCKED** until this assessment is done. We refuse to give medical advice without knowing who the patient is.
+*   **The 15-Question Protocol:** Scoring covers Metabolic Health, Frailty, Resilience, and Lifestyle.
+*   **Risk Logic (0-175 Score):**
+    *   `0 - 20`: **Healthy Baseline** (Green)
+    *   `21 - 40`: **Moderate Attention** (Amber)
+    *   `> 40`: **High Risk** (Red).
+*   **Data Lock:** "Smart Reports" are **disabled** until assessment is complete.
 
 ### Module B: Smart Reports (The "Brain")
 **Purpose:** To turn unstructured chaos (files) into structured intelligence (JSON).
+*   **Technology:** Google Gemini 2.0 Flash.
+*   **The Context Prompt:** `[User Profile (Diabetic, 72)]` + `[PDF Data]` → *"Analyze tailored risks."*
+*   **Output:** Strict JSON (Biomarkers, Medicines, Clinical Correlation).
 
-*   **Technology:** Google Gemini 2.5 Flash (chosen for speed/cost).
-*   **The "Context Prompt":**
-    *   We don't just send the PDF to the AI.
-    *   We send: `[The User Profile (Diabetic, 72)]` + `[The PDF Data]`.
-    *   The Prompt instruction is: *"Analyze this PDF. Highlight findings that are dangerous SPECIFICALLY for a user with this profile."*
-*   **The Output (JSON Schema):**
-    *   We force the AI to return strict JSON:
-        ```json
-        {
-          "biomarkers": [{ "name": "Creatinine", "value": "1.1", "status": "High" }],
-          "medicines": [{ "name": "Aspirin", "type": "Chronic", "duration": "Ongoing" }],
-          "clinicalCorrelation": "Creatinine is high. Given user's Diabetes, screen for Kidney Disease."
-        }
-        ```
-*   **Fallback System:** If the primary AI model fails or times out, we auto-retry with "Flash-Lite".
+### Module C: Medication & Wellness Tracker
+**Purpose:** Daily Adherence & device integration.
+*   **Three-Tab Architecture:**
+    1.  **Daily Care:** The "Today" dashboard.
+        *   *Left Column:* Dynamic Checklist of Medicines (Morning/Afternoon/Night).
+        *   *Right Column:* Vitals Input, **Connected Devices Hub**, Lifestyle Habits.
+    2.  **History (Calendar):** A visual month-view of adherence (Green/Orange/Red dots).
+    3.  **Manage Meds:** Inventory control (Edit dosages, Add/Remove meds).
+*   **Interactive Features (New in v3.0):**
+    *   **Device Sync Simulation:** 
+        *   *FreeStyle Libre (CGM):* Clicking "Sync" auto-populates Sugar to **110 mg/dL**.
+        *   *Apple Watch:* Clicking "Sync" auto-populates Weight (**64.5kg**) & Activity (**45 mins**) + Hydration.
+        *   *Feedback:* Instant "Toast" notification confirming data sync.
+    *   **Optimistic UI:** Clicking a pill to "Take" it instantly moves it to the taken state (Green Check) with animation.
 
-### Module C: Medication Tracker
-**Purpose:** Adherence.
+### Module D: Clinic Hub (Operations)
+**Purpose:** Managing the logistics of care (Appointments & Finance).
+*   **Wallet System (New!):**
+    *   **Balance Tracking:** Real-time wallet balance (Default: ₹1,250).
+    *   **Top-Up Simulation:** Clicking "Top Up" triggers a mock payment gateway delay (1.5s), then adds **₹1,000** and updates the UI.
+*   **Booking Engine (New!):**
+    *   **"Book New" Modal:** An overlay to schedule appointments.
+    *   **Specialist Selection:** Dr. Aruna (Geriatric), Dr. Esha (Cardio), Coach Vikram.
+    *   **List Management:** Confirmed appointments are added to the schedule **immediately**.
 
-*   **Visual Design:**
-    *   **Grid Layout:** Easy to tap cards.
-    *   **Color Coding:** Red (Missed), Green (Taken), Grey (Upcoming).
-*   **Data Model:**
-    *   We store "Active Meds" and "Daily Logs" separately in `localStorage`.
-    *   This allows us to track history: *"Did he take meds last Tuesday?"*
-
-### Module D: Care Team & System Reset
-**Purpose:** Trust & Control.
-
-*   **The "Care Squad":** A humanized UI showing the AI as just one member of a team (Doctor, Care Manager, AI). This reduces "AI Fear" for elderly users.
-*   **System Reset:**
-    *   We built a "Nuclear Option" to wipe the brain.
-    *   **Safety:** Requires **Two Confirmations** (Double Modal). "Are you sure?" -> "Really sure?".
-    *   Why? Because wiping the context destroys the personalization.
+### Module E: Care Team & Messaging
+**Purpose:** Human trust layer.
+*   **The Team:** AI + 4 Specialists.
+*   **Interactive Team Building:** "Add Member" button simulates inviting a family member via link.
+*   **WhatsApp Redirect:** Clicking "Chat" opens the native WhatsApp interface (simulated link) for zero-friction communication.
 
 ---
 
-## 4. Technical Architecture (For PMs)
+## 3. End-to-End Testing Script (QA Guide)
 
-You don't need to code, but you must understand the **Infrastructure**.
+Use this script to validate the "Yukti OS" v2.1 Interactive Build.
+
+### TEST 1: The "Device Sync" Flow
+1.  Navigate to **Daily Care** tab.
+2.  Scroll to the **"Connected Devices"** card (Right Column).
+3.  **Action:** Click "Sync" on the *FreeStyle Libre* card.
+    *   *Expected:* A green toast appears: "⚡ Synced 110 mg/dL". 
+    *   *Verify:* The "Sugar" input field in the "Vitals" card above it should now show `110`.
+4.  **Action:** Click "Sync" on the *Apple Watch* card.
+    *   *Expected:* A green toast appears.
+    *   *Verify:* The "Weight" input should show `64.5`, and "Activity" (Habits card) should show `45`.
+
+### TEST 2: The "Clinic Wallet" Flow
+1.  Navigate to **Clinic Hub**.
+2.  Locate the "Health Finance" card (Right Column).
+3.  **Check:** Current Balance should be `₹ 1,250`.
+4.  **Action:** Click the "Top Up" white button.
+    *   *Expected:* A blue toast "Processing Secure Payment..." appears.
+    *   *Wait:* After 1.5 seconds, a green toast "₹1,000 added" appears.
+    *   *Verify:* Balance text animates and changes to `₹ 2,250`.
+
+### TEST 3: The "Book Appointment" Flow
+1.  In **Clinic Hub**, click the black **"+ Book New"** button (Top Right).
+2.  **Verify:** A modal overlay opens with a white form.
+3.  **Action:** 
+    *   Select "Coach Vikram" from dropdown.
+    *   Pick any future date and time.
+    *   Click "Confirm Booking".
+4.  **Verify:**
+    *   Modal closes.
+    *   Success toast appears.
+    *   A new card for "Coach Vikram" appears at the **top** of the "Your Schedule" list.
+
+### TEST 4: The "Add Med" Flow
+1.  Navigate to **Medication Tracker** -> **Manage Meds** tab.
+2.  Click **"+ Add New"**.
+3.  **Action:**
+    *   Name: "Vitamin D".
+    *   Dosage: "1 Tab".
+    *   Time: Click "Morning".
+    *   Click "Add to List".
+4.  **Verify:**
+    *   Switch back to **Daily Care** tab.
+    *   "Vitamin D" should appear in yesterday/today's checklist.
+
+---
+
+## 4. Technical Architecture
 
 ### 1. The "Engine": Next.js (App Router)
 *   **What it is:** The framework running the website.
-*   **Why:** It allows for "Serverless Functions" (our API) and fast UI rendering.
+*   **Why:** Serverless Functions + Fast UI.
 
-### 2. The "Brain": Serverless Edge Functions
+### 2. State Management Strategy
+*   **Local State:** We use React `useState` for immediate UI interactions (Modals, Forms).
+*   **Persistence:** `localStorage` is used as the "Database of Record".
+    *   `yukti_active_meds`: Stores the inventory.
+    *   `yukti_daily_log_${date}`: Stores adherence logs per day.
+    *   *Note:* Clearing browser cache wipes this data (Privacy Feature).
+
+### 3. The "Brain": Serverless Edge Functions
 *   **Location:** `src/app/api/analyze/route.ts`
-*   **How it works:** 
-    *   When a user uploads a file, it goes to this function.
-    *   The function runs for only **10–60 seconds** (Vercel Limit).
-    *   It talks to Google, gets the JSON, and shuts down.
-    *   *Constraint:* Large files (>10MB) or massive books will fail because the function will "time out" before reading them.
-
-### 3. The "Memory": Local Storage (Client-Side)
-*   **Privacy First:** All data (Profile, Reports, Meds) lives **inside the user's Chrome browser**.
-*   **Pros:** 100% Privacy. Zero Server Cost. Instant Loading.
-*   **Cons:** If they clear cache or switch from Phone to Laptop, the data is gone.
-*   **Roadmap Fix:** We will need a Cloud Database (Supabase) in Phase 3.
+*   **Constraint:** 60-second execution limit.
 
 ---
 
-## 5. Deployment Guide (Vercel)
+## 5. Deployment & Constraints
 
-We use Vercel for hosting. It's stable, fast, and free for hobby usage.
-
-### Critical Constraints
-1.  **Environment Variables:** The app is a "blank slate" without keys. You MUST add `NEXT_PUBLIC_GEMINI_API_KEY` in Vercel settings.
-2.  **The "10-Second Rule":** On the free plan, if the AI thinks for more than 10 seconds, Vercel cuts the line.
-    *   *Solution:* We optimized code to request 60s, but it's not guaranteed.
-    *   *PM Note:* Always demo with 1-2 page PDFs. Do not upload a 50-page hospital bill in a demo.
-
----
-
-## 6. Design System & UX Choices
-
-*   **Color Psychology:** 
-    *   **Orange (Primary):** Warmth, Alertness (Yukti Brand).
-    *   **Emerald (Secondary):** Success, Safety, "All Good".
-    *   **Slate (Text):** High contrast for elderly readability (Pure black is too harsh).
-*   **Typography:**
-    *   **Mobile-First:** We use large text (`text-xl` headers) but keep it proportional. We explicitly tested size 30px and rejected it for being too aggressive on small screens.
+1.  **Environment Variables:** Requires `NEXT_PUBLIC_GEMINI_API_KEY`.
+2.  **The "10-Second Rule":** Vercel functions must be optimized. We use "Streaming" where possible.
+3.  **Demo Limits:** 
+    *   Wallet payments are *simulated* (No real banking API).
+    *   Device Sync is *simulated* (No real Bluetooth connection).
+    *   These features are designed to demonstrate the **User Experience** to stakeholders and investors.
 
 ---
 
-## 7. Future Roadmap (The Backlog)
-
-1.  **WhatsApp Integration (High Priority):**
-    *   Elderly users live on WhatsApp.
-    *   *Feature:* Send the daily "Holistic Summary" as a WhatsApp message to the daughter.
-2.  **Voice Interaction:**
-    *   Typing is hard for shaky hands.
-    *   *Feature:* "Yukti, did I take my morning pill?" (Voice-to-Text).
-3.  **Cloud Sync:**
-    *   Enable login so data persists across devices.
-
----
-*End of Deep Dive Guide.*
+*End of Master Guide.*
