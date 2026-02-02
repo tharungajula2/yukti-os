@@ -130,18 +130,18 @@ export function loadDemoData() {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     
-    // Today: Partial
+    // Today: Empty for user interaction
     localStorage.setItem('yukti_daily_log_' + todayStr, JSON.stringify({
-        meds: ['Glycomet 0.5mg', 'Excela Max / Coconut Oil'], 
-        vitals: { bpSys: 130, bpDia: 85, sugar: 140 }
+        meds: [], 
+        vitals: {}  // Clean slate
     }));
 
-    // Yesterday: Perfect
+    // Yesterday: Empty for user interaction
     const yest = new Date(today); yest.setDate(yest.getDate() - 1);
     const yestStr = yest.toISOString().split('T')[0];
     localStorage.setItem('yukti_daily_log_' + yestStr, JSON.stringify({
-        meds: ['Glycomet 0.5mg', 'Levolin Rotacaps', 'Combihale FF 100', 'Teczine', 'Excela Max / Coconut Oil'], 
-        vitals: { bpSys: 125, bpDia: 80 }
+        meds: [], 
+        vitals: {}
     }));
 
     alert("Demo Profile Loaded: Chaaya (High Risk / Asthma / Diabetes) 🚀");

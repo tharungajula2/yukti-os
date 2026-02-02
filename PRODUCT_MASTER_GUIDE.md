@@ -1,6 +1,6 @@
 # Yukti OS: The Complete Product Master Guide
-**Version:** 3.0 (Interactive Intelligence Release)  
-**Date:** February 1, 2026  
+**Version:** 3.1 (Interactive Intelligence & Brand Polish)  
+**Date:** February 2, 2026  
 **Audience:** Product Managers, QA Engineers, & Developers
 
 ---
@@ -20,7 +20,7 @@ Most health apps fail the elderly because they are **Context-Blind**. They treat
 
 Our system is divided into 5 interactive modules. Each module is designed for **"Passive Collection, Active Intervention"**.
 
-### Module A: The Clinical Engine (Risk Engine)
+### Module A: Health Assessment (Risk Engine)
 **Purpose:** To establish the "Baseline". Without this, the AI is flying blind.
 *   **The Design:** A digital intake form mimicking a Geriatrician's first assessment.
 *   **The 15-Question Protocol:** Scoring covers Metabolic Health, Frailty, Resilience, and Lifestyle.
@@ -44,7 +44,7 @@ Our system is divided into 5 interactive modules. Each module is designed for **
         *   *Right Column:* Vitals Input, **Connected Devices Hub**, Lifestyle Habits.
     2.  **History (Calendar):** A visual month-view of adherence (Green/Orange/Red dots).
     3.  **Manage Meds:** Inventory control (Edit dosages, Add/Remove meds).
-*   **Interactive Features (New in v3.0):**
+*   **Interactive Features:**
     *   **Device Sync Simulation:** 
         *   *FreeStyle Libre (CGM):* Clicking "Sync" auto-populates Sugar to **110 mg/dL**.
         *   *Apple Watch:* Clicking "Sync" auto-populates Weight (**64.5kg**) & Activity (**45 mins**) + Hydration.
@@ -53,13 +53,14 @@ Our system is divided into 5 interactive modules. Each module is designed for **
 
 ### Module D: Clinic Hub (Operations)
 **Purpose:** Managing the logistics of care (Appointments & Finance).
-*   **Wallet System (New!):**
+*   **Wallet System:**
     *   **Balance Tracking:** Real-time wallet balance (Default: ₹1,250).
     *   **Top-Up Simulation:** Clicking "Top Up" triggers a mock payment gateway delay (1.5s), then adds **₹1,000** and updates the UI.
-*   **Booking Engine (New!):**
+*   **Booking Engine:**
     *   **"Book New" Modal:** An overlay to schedule appointments.
     *   **Specialist Selection:** Dr. Aruna (Geriatric), Dr. Esha (Cardio), Coach Vikram.
     *   **List Management:** Confirmed appointments are added to the schedule **immediately**.
+*   **Insurance:** Rebranded to **"Yukti Senior Shield"** (Active Policy).
 
 ### Module E: Care Team & Messaging
 **Purpose:** Human trust layer.
@@ -69,7 +70,22 @@ Our system is divided into 5 interactive modules. Each module is designed for **
 
 ---
 
-## 3. End-to-End Testing Script (QA Guide)
+## 3. User Experience & Design Polish
+
+### Work-in-Progress (WIP) Indicators
+To properly set expectations for Alpha/Beta testers, aesthetic indicators have been added:
+1.  **Login Screen:** Pulsing "Work in Progress" pill under the author credits.
+2.  **Sidebar & Header:** "WIP" badge visible globally on the app chrome.
+3.  **Dashboard Header:** "System operating at nominal capacity (WIP v2.1)".
+
+### Clean Demo Data Logic
+*   **Interaction Model:** When "Load Demo Data" is clicked, it pre-fills the *Clinical Profile* and *Medicine Inventory*.
+*   **Default State:** It explicitly **clears** value for "Today's Logs".
+*   *Result:* Users see the checklist as **empty** (unticked), inviting them to interact with the UI themselves.
+
+---
+
+## 4. End-to-End Testing Script (QA Guide)
 
 Use this script to validate the "Yukti OS" v2.1 Interactive Build.
 
@@ -86,11 +102,11 @@ Use this script to validate the "Yukti OS" v2.1 Interactive Build.
 ### TEST 2: The "Clinic Wallet" Flow
 1.  Navigate to **Clinic Hub**.
 2.  Locate the "Health Finance" card (Right Column).
-3.  **Check:** Current Balance should be `₹ 1,250`.
+3.  **Verify:** Policy Name is "Yukti Senior Shield".
 4.  **Action:** Click the "Top Up" white button.
     *   *Expected:* A blue toast "Processing Secure Payment..." appears.
     *   *Wait:* After 1.5 seconds, a green toast "₹1,000 added" appears.
-    *   *Verify:* Balance text animates and changes to `₹ 2,250`.
+    *   *Verify:* Balance text animates and changes from `₹ 1,250` to `₹ 2,250`.
 
 ### TEST 3: The "Book Appointment" Flow
 1.  In **Clinic Hub**, click the black **"+ Book New"** button (Top Right).
@@ -100,40 +116,8 @@ Use this script to validate the "Yukti OS" v2.1 Interactive Build.
     *   Pick any future date and time.
     *   Click "Confirm Booking".
 4.  **Verify:**
-    *   Modal closes.
-    *   Success toast appears.
+    *   Modal closes and success toast appears.
     *   A new card for "Coach Vikram" appears at the **top** of the "Your Schedule" list.
-
-### TEST 4: The "Add Med" Flow
-1.  Navigate to **Medication Tracker** -> **Manage Meds** tab.
-2.  Click **"+ Add New"**.
-3.  **Action:**
-    *   Name: "Vitamin D".
-    *   Dosage: "1 Tab".
-    *   Time: Click "Morning".
-    *   Click "Add to List".
-4.  **Verify:**
-    *   Switch back to **Daily Care** tab.
-    *   "Vitamin D" should appear in yesterday/today's checklist.
-
----
-
-## 4. Technical Architecture
-
-### 1. The "Engine": Next.js (App Router)
-*   **What it is:** The framework running the website.
-*   **Why:** Serverless Functions + Fast UI.
-
-### 2. State Management Strategy
-*   **Local State:** We use React `useState` for immediate UI interactions (Modals, Forms).
-*   **Persistence:** `localStorage` is used as the "Database of Record".
-    *   `yukti_active_meds`: Stores the inventory.
-    *   `yukti_daily_log_${date}`: Stores adherence logs per day.
-    *   *Note:* Clearing browser cache wipes this data (Privacy Feature).
-
-### 3. The "Brain": Serverless Edge Functions
-*   **Location:** `src/app/api/analyze/route.ts`
-*   **Constraint:** 60-second execution limit.
 
 ---
 

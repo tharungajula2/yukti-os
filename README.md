@@ -1,18 +1,14 @@
 # Yukti OS: The Context-Aware Health OS for the Elderly
+**Current Version:** 2.1 (Interactive Build)
 
-**AI-Powered. Privacy-First. Specialist-Supervised.**
-
-Yukti OS is not just another health app. It is a **Digital Twin** for elderly care that uses **Context-Aware AI** to interpret medical data relative to a patient's specific frailty profile, rather than generic averages.
-
-![Yukti OS Cover](https://via.placeholder.com/1200x600?text=Yukti+OS+Dashboard)
-*(Replace with actual screenshot after deployment)*
+![Yukti OS Dashboard](https://via.placeholder.com/1200x600?text=Yukti+OS+Health+Assessment+Dashboard)
 
 ---
 
 ## 🚀 The Core Innovation: "Context-Awareness"
 
 Most health apps see a blood sugar level of `160 mg/dL` and flag it as "High".
-**Yukti OS** checks the **Clinical Engine** first. It sees:
+**Yukti OS** checks its **Health Assessment Engine** first. It sees:
 > *"Patient is 75 years old + has a history of hypoglycemia (low sugar falls)."*
 
 It then intelligently decides:
@@ -22,34 +18,35 @@ This **System Context** is what separates Yukti from generic LLM wrappers.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Key Features (v2.1)
 
-### 1. 🧠 The Clinical Engine (Risk Assessment)
-*   A 15-question geriatric assessment (Sleep, Mobility, Frailty).
-*   Calculates a **Risk Score (0-100)** to calibrate the AI's sensitivity.
-*   *Tech:* Vertical stacking layout for mobile accessibility.
+### 1. 🩺 Health Assessment (Risk Engine)
+*   **Purpose:** Establishes the clinical baseline.
+*   **Logic:** A 15-question geriatric assessment (Sleep, Mobility, Frailty) calculates a **Risk Score (0-175)** to calibrate the AI's sensitivity.
+*   *New:* renamed from "Clinical Engine" for friendlier UX.
 
-### 2. 📄 Smart Reports (Gemini 2.5 Flash)
+### 2. 🏥 Clinic Hub (Interactive)
+*   **Appointments:** Book specialists (Dr. Aruna, Coach Vikram) with a streamlined modal interface.
+*   **Yukti Senior Shield:** Integrated wallet system with simulated "Top Up" payment gateways for handling insurance copays.
+
+### 3. 📄 Smart Reports (Gemini 2.5)
 *   **Upload & Analyze:** Reads PDFs, handwritten prescriptions, and lab reports.
-*   **Deep Linking:** Connects new findings to past history.
 *   **Holistic Summary:** Synthesizes 6 months of reports into a 5-line narrative for the family.
 
-### 3. 💊 Daily Wellness Tracker
-*   **Medication Management:** Grid-based tracker for chronic & acute meds.
-*   **Lifestyle & Habits:** Tracks hydration, activity (walking mins), and diet adherence.
-*   **Safety Net:** Auto-triggers a "Simulated Call" if meds are missed.
+### 4. 💊 Daily Wellness & Device Sync
+*   **Adherence Tracker:** Simple "Tick to Take" interaction for daily meds.
+*   **Device Hub:** Simulates syncing with **FreeStyle Libre (CGM)** and **Apple Watch** to auto-populate vitals like Sugar and Weight.
 
-### 4. 💬 WhatsApp Assistant (Vision Demo)
-*   A 'Nani-Bot' interface demonstrating how we meet seniors where they are.
-*   No app download required for the end-user (Vision).
+### 5. 💬 WhatsApp Companion (Vision Demo)
+*   A 'Nani-Bot' interface demonstrating how we meet seniors where they are (WhatsApp), reducing the need to learn a new UI.
 
 ---
 
 ## 🛠 Tech Stack
 
 *   **Framework:** Next.js 15 (App Router)
-*   **Styling:** Tailwind CSS + Framer Motion
-*   **AI Model:** Google Gemini 2.5 Flash (via Vercel Serverless Functions)
+*   **Styling:** Tailwind CSS + Framer Motion (for smooth interactions)
+*   **AI Model:** Google Gemini 2.0 Flash (via Vercel Serverless Functions)
 *   **Database:** `localStorage` (Client-Side Persistence for 100% Privacy)
 *   **Icons:** Lucide React
 
@@ -84,7 +81,7 @@ This **System Context** is what separates Yukti from generic LLM wrappers.
 
 ## 🔐 Privacy & Security
 *   **Zero-Knowledge Storage:** Currently, all patient data lives **inside the user's browser** (Local Storage). No medical data is stored on our servers.
-*   **Ephemeral Analysis:** Data is sent to the AI only for the duration of the analysis window and is not trained upon.
+*   **Ephemereal Analysis:** Data is sent to the AI only for the duration of the analysis window and is not trained upon.
 
 ---
 

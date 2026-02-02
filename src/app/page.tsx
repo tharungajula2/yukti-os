@@ -192,7 +192,7 @@ function DashboardShell() {
           <nav className="p-4 space-y-1">
             <NavItem
               icon={<Stethoscope size={20} />}
-              label="Clinical Engine"
+              label="Health Assessment"
               active={activeView === "clinical"}
               onClick={() => setActiveView("clinical")}
             />

@@ -112,7 +112,7 @@ export function ClinicalEngine() {
             <div className="w-full md:w-1/2 flex-1 overflow-y-auto pr-1 md:pr-4 custom-scrollbar pb-32 md:pb-20">
                 <div className="mb-6 flex items-start justify-between">
                     <div>
-                        <h2 className="text-xl md:text-2xl font-bold text-slate-900">Clinical Assessment</h2>
+                        <h2 className="text-xl md:text-2xl font-bold text-slate-900">Health Assessment</h2>
                         <p className="text-sm text-slate-600">Complete this 15-point check for a holistic health profile.</p>
                     </div>
                     <button
