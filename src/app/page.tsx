@@ -57,13 +57,6 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mb-6 rounded-lg bg-orange-50/50 p-4 text-center">
-              <p className="text-xs font-medium text-orange-800 tracking-wide uppercase">
-                Restricted Access
-              </p>
-              <p className="text-sm text-orange-600">Founder's Office Protocol</p>
-            </div>
-
             <form onSubmit={handleLogin} className="space-y-4">
               <motion.div
                 animate={error ? { x: [-10, 10, -10, 10, 0] } : {}}
@@ -88,15 +81,16 @@ export default function Home() {
                 Initialize System
                 <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />
               </button>
-
-              <button
-                type="button"
-                onClick={() => loadDemoData()}
-                className="w-full py-2 text-xs font-semibold text-orange-600 hover:text-orange-700 uppercase tracking-widest hover:bg-orange-50/50 rounded-lg transition-colors border border-transparent hover:border-orange-100"
-              >
-                Load Founder's Demo (Chaaya)
-              </button>
             </form>
+
+            <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+              <p className="text-[10px] text-orange-400 uppercase tracking-widest font-bold mb-1">
+                Strategic Vision Prototype
+              </p>
+              <p className="text-[10px] text-slate-400 font-medium">
+                Conceptualized for <span className="text-slate-600 font-bold">Praan Health</span>
+              </p>
+            </div>
           </div>
         </motion.div>
       </div>
